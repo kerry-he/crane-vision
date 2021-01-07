@@ -1,7 +1,11 @@
 import apriltag
 import cv2
 import numpy as np
+import time
+from scipy.spatial.transform import Rotation
+
 from utils import *
+from kalman_filter import *
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -11,11 +15,26 @@ options = apriltag.DetectorOptions(families="tag36h11")
 detector = apriltag.Detector(options)
 path = []
 
+
 # Marker and camera parameters
 fx, fy, cx, cy = (739.2116337887949, 731.2693931923594, 472.1271812307942, 265.5094352085958)
-tag_size = 45.0
-srcPoints = np.array([[-tag_size / 2, -tag_size / 2], [tag_size / 2, -tag_size / 2], [tag_size / 2, tag_size / 2], [-tag_size / 2, tag_size / 2]])
 K = extrinsic_matrix(fx, fy, cx, cy)
+
+tag_size = 38.0
+tag_corners = np.array([[-tag_size / 2, -tag_size / 2], [tag_size / 2, -tag_size / 2], [tag_size / 2, tag_size / 2], [-tag_size / 2, tag_size / 2]])
+
+src_corners = [
+    tag_corners + [-57.0, -97.0],
+    tag_corners + [57.0, -97.0],
+    tag_corners + [-57.0, 97.0],
+    tag_corners + [57.0, 97.0]
+]
+
+kalman = Kalman()
+
+# Profiling variables
+profile_x = [[], [], [], []]
+
 
 # Create OpenCV window to continuously capture from webcam
 cv2.namedWindow("preview")
@@ -29,16 +48,18 @@ else:
     rval = False
 
 while rval:
+    tic = time.time()
+
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     results = detector.detect(gray)
 
+    src = np.empty((0, 2))
+    dst = np.empty((0, 2))
+
     # loop over the AprilTag detection results
     for r in results:
-        M, _, _ = detector.detection_pose(r, (fx, fy, cx, cy), tag_size)
-        # print(M[:3, :3])
-        # print(M[:3, 3])
-        path.append(M[:3, 3])
+        # M, _, _ = detector.detection_pose(r, (fx, fy, cx, cy), tag_size)
 
         # extract the bounding box (x, y)-coordinates for the AprilTag
         # and convert each of the (x, y)-coordinate pairs to integers
@@ -62,22 +83,36 @@ while rval:
         tagFamily = r.tag_family.decode("utf-8")
         cv2.putText(frame, tagFamily, (ptA[0], ptA[1] - 15),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        print("[INFO] tag family: {}".format(tagFamily))
+        # print("[INFO] tag family: {}".format(tagFamily))
 
-        H, _ = cv2.findHomography(srcPoints, np.asarray(r.corners))
-        H_ = calculate_homography(srcPoints, np.asarray(r.corners))
-        R, t = homography_decomposition(H, K)
-        R_, t_ = homography_decomposition(H_, K)
+        if r.tag_id >= 0 and r.tag_id <=3:
+            src = np.append(src, src_corners[r.tag_id], axis=0)
+            dst = np.append(dst, r.corners, axis=0)
 
-        print(R, t)
-        print(R_, t_)
+        # H, _ = cv2.findHomography(srcPoints, np.asarray(r.corners))
+        # R, t = homography_decomposition(H, K)
         # print(R, t)
+
+    toc = time.time()
+    kalman.predict_step(toc - tic)
         
     # Plot the path travelled by the marker
     if results:
-        x = t[0]
-        y = t[1]
-        z = t[2]
+        H, _ = cv2.findHomography(np.asarray(src), np.asarray(dst), cv2.RANSAC, 10.0)
+        R, t = homography_decomposition(H, K)
+        
+        r = Rotation.from_matrix(R)
+        z = np.concatenate((np.squeeze(t), r.as_euler('xyz', degrees=True)))
+        kalman.update_step(z)
+        profile_x[len(results) - 1].append(z)
+
+        x = kalman.x[0]
+        y = kalman.x[1]
+        z = kalman.x[2]
+
+        r = Rotation.from_euler('xyz', kalman.x[3:6], degrees=True)
+        R = r.as_matrix()
+
         plt.cla()
         ax.set_xlim(-250, 250)
         ax.set_ylim(-250, 250)
@@ -88,10 +123,17 @@ while rval:
 
         plt.pause(0.01)
 
+
     # show the output image after AprilTag detection
     cv2.imshow("Image", frame)
     rval, frame = vc.read()
     key = cv2.waitKey(20)
     if key == 27: # exit on ESC
         break
+
 cv2.destroyWindow("preview")
+
+for x in profile_x:
+    x = np.asarray(x)
+    print(x.shape)
+    print(np.std(x, axis=0))

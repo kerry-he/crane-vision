@@ -54,3 +54,37 @@ def calculate_homography(src, dst):
     H = V[-1].reshape((3, 3))
 
     return H
+
+def orb_homography(img1, img2, MIN_MATCH_COUNT=10):
+
+    # Initiate ORB detector
+    orb = cv2.ORB_create()
+
+    # Find the keypoints and descriptors with ORB
+    kp1, des1 = orb.detectAndCompute(img1, None)
+    kp2, des2 = orb.detectAndCompute(img2, None)
+
+    # Create Brute-Force Matcher object
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+    # Match descriptors.
+    matches = bf.match(des1, des2)
+
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    # If enough matches are found, cmpute homography
+    if len(matches)>MIN_MATCH_COUNT:
+        # Obtain matched pairs of keypoints
+        src_pts = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1, 1, 2)
+        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1, 1, 2)
+        
+        # Calculate homography using RANSAC
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+        return M
+
+    else:
+        print("Not enough matches are found - %d/%d" % (len(matches),MIN_MATCH_COUNT))
+        
+        return None
