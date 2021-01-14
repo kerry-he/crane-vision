@@ -6,19 +6,17 @@ from scipy.spatial.transform import Rotation
 
 from utils import *
 from kalman_filter import *
+from CameraWebcam import CameraWebcam
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+
+camera = CameraWebcam()
 
 # Setup AprilTag detector
 options = apriltag.DetectorOptions(families="tag36h11")
 detector = apriltag.Detector(options)
 path = []
-
-
-# Marker and camera parameters
-fx, fy, cx, cy = (739.2116337887949, 731.2693931923594, 472.1271812307942, 265.5094352085958)
-K = extrinsic_matrix(fx, fy, cx, cy)
 
 tag_size = 38.0
 tag_corners = np.array([[-tag_size / 2, -tag_size / 2], [tag_size / 2, -tag_size / 2], [tag_size / 2, tag_size / 2], [-tag_size / 2, tag_size / 2]])
@@ -43,19 +41,14 @@ profile_x = [[], [], [], []]
 
 
 # Create OpenCV window to continuously capture from webcam
-cv2.namedWindow("preview")
-vc = cv2.VideoCapture(0)
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-if vc.isOpened(): # try to get the first frame
-    rval, frame = vc.read()
-else:
-    rval = False
-
 src_corners = src_corners + np.asarray(mosaic_shape) / 2
 
-while rval:
+while camera.is_alive():
+    frame = camera.capture_frame()
+
     tic = time.time()
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -111,7 +104,7 @@ while rval:
 
     
     if H is not None:
-        R, t = homography_decomposition(H, K)
+        R, t = homography_decomposition(H, camera.K)
         
         warped_frame = cv2.warpPerspective(frame, np.linalg.inv(H), dsize=mosaic_shape)
         mosaic_frame = make_mosaic(mosaic_frame, warped_frame)
@@ -148,12 +141,11 @@ while rval:
 
     # show the output image after AprilTag detection
     cv2.imshow("Image", frame)
-    rval, frame = vc.read()
     key = cv2.waitKey(20)
     if key == 27: # exit on ESC
         break
 
-cv2.destroyWindow("preview")
+camera.release()
 
 for x in profile_x:
     x = np.asarray(x)

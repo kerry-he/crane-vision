@@ -1,4 +1,5 @@
 import cv2
+
 from utils import *
 
 
@@ -8,8 +9,8 @@ class CameraWebcam():
         self.vc = cv2.VideoCapture(0)
 
         # Define camera parameters
-        _, frame = vc.read()
-        self.h, self.w = frame.shape[:2]
+        self.rval, img = self.vc.read()
+        self.h, self.w = img.shape[:2]
 
         fx, fy, cx, cy = (739.2116337887949, 731.2693931923594,
                           472.1271812307942, 265.5094352085958)
@@ -25,7 +26,17 @@ class CameraWebcam():
             K, self.distortion, None, self.K, (self.w, self.h), 5)
 
     def capture_frame(self):
-        _, img = self.vc.read()
-        img = cv2.remap(img, mapx, mapy, cv2.INTER_LINEAR)
+        self.rval, img = self.vc.read()
 
-        return img
+        if self.rval:
+            # Undistort camera frame
+            img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
+            return img
+
+        return None
+
+    def is_alive(self):
+        return self.rval
+
+    def release(self):
+        pass

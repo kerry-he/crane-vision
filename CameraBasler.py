@@ -1,13 +1,15 @@
 from pypylon import pylon
 from pypylon import genicam
 import cv2
-import time
+
+from utils import *
 
 
 class CameraBasler():
     def __init__(self):
         # Conecting to the first available camera
-        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        self.camera = pylon.InstantCamera(
+            pylon.TlFactory.GetInstance().CreateFirstDevice())
         self.camera.Open()
 
         # Load in camera parameters
@@ -15,40 +17,50 @@ class CameraBasler():
         pylon.FeaturePersistence.Load(nodeFile, self.camera.GetNodeMap(), True)
 
         # Grabing Continusely (video) with minimal delay
-        self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly) 
+        self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
         self.converter = pylon.ImageFormatConverter()
 
         # Converting to opencv bgr format
         self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
         self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
 
-        # Marker and camera parameters
-        fx, fy, cx, cy = (1.79783924e+03, 1.79734316e+03, 1.00904154e+03, 7.47131925e+02)
-        mtx = extrinsic_matrix(fx, fy, cx, cy)
-        dist = np.asarray([[-1.73606123e-01, 8.51898824e-02, 1.64237962e-04, -7.81281736e-04, -8.26497994e-03]])
+        self.h = self.camera.Height.GetValue()
+        self.w = self.camera.Width.GetValue()
 
+        # Marker and camera parameters
+        fx, fy, cx, cy = (1.79783924e+03, 1.79734316e+03,
+                          1.00904154e+03, 7.47131925e+02)
+        K = extrinsic_matrix(fx, fy, cx, cy)
+
+        self.distortion = np.asarray([[-1.73606123e-01, 8.51898824e-02,
+                                       1.64237962e-04, -7.81281736e-04, -8.26497994e-03]])
+
+        # Perform calculations to obtain intrisic (K) and distortion (dist) parameters
+        self.K, _ = cv2.getOptimalNewCameraMatrix(
+            K, self.distortion, (self.w, self.h), 1.0, (self.w, self.h))
+        self.mapx, self.mapy = cv2.initUndistortRectifyMap(
+            K, self.distortion, None, self.K, (self.w, self.h), 5)
 
     def capture_frame(self):
-        grabResult = camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-        
+        grabResult = self.camera.RetrieveResult(
+            5000, pylon.TimeoutHandling_ThrowException)
 
-while camera.IsGrabbing():
+        img = None
 
-    
+        if grabResult.GrabSucceeded():
+            # Access the image data
+            image = self.converter.Convert(grabResult)
+            img = image.GetArray()
 
-    if grabResult.GrabSucceeded():
-        # Access the image data
-        image = converter.Convert(grabResult)
-        img = image.GetArray()
+            # Undistort camera frame
+            img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
 
-        cv2.namedWindow('title', cv2.WINDOW_NORMAL)
-        cv2.imshow('title', img)
-        k = cv2.waitKey(1)
-        if k == 27:
-            break
-    grabResult.Release()
-    
-# Releasing the resource    
-camera.StopGrabbing()
+        grabResult.Release()
+        return img
 
-cv2.destroyAllWindows()
+    def is_alive(self):
+        return self.camera.IsGrabbing()
+
+    def release(self):
+        # Releasing the resource
+        self.camera.StopGrabbing()
