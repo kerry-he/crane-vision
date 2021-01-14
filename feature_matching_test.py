@@ -3,6 +3,8 @@ import cv2
 from matplotlib import pyplot as plt
 import time
 
+from utils import extrinsic_matrix, homography_decomposition
+
 def orb_homography(img1, img2, MIN_MATCH_COUNT=10):
 
     # Initiate ORB detector
@@ -39,10 +41,24 @@ def orb_homography(img1, img2, MIN_MATCH_COUNT=10):
 
 
 if __name__ == "__main__":
+
+    # Marker and camera parameters
+    fx, fy, cx, cy = (739.2116337887949, 731.2693931923594, 472.1271812307942, 265.5094352085958)
+    K = extrinsic_matrix(fx, fy, cx, cy)
+
     img1 = cv2.imread('images/room0.jpg',0)
     img2 = cv2.imread('images/room1.jpg',0)
 
     M, mask, kp1, kp2, matches = orb_homography(img1, img2)
+    num, Rs, Ts, Ns = cv2.decomposeHomographyMat(M, K)
+    print(M)
+    for i in range(num):
+        print(Rs[i])
+        print(Ts[i])
+        print(Ns[i])
+
+    R, t = homography_decomposition(M, K)
+    print(R, t)
 
     matchesMask = mask.ravel().tolist()
 

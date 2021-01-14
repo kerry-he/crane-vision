@@ -1,5 +1,5 @@
 import numpy as np
-
+import cv2
 
 def extrinsic_matrix(fx, fy, cx, cy):
     K = np.array([
@@ -11,20 +11,45 @@ def extrinsic_matrix(fx, fy, cx, cy):
     return K
 
 def homography_decomposition(H, K):
-    # Converts a homography H into rotation and pose
-    H = H.T
+    # # Converts a homography H into rotation and pose
+    # H = H.T
+    # h1 = H[0]
+    # h2 = H[1]
+    # h3 = H[2]
+    # K_inv = np.linalg.inv(K)
+    # L = 1 / np.linalg.norm(np.dot(K_inv, h1))
+    # r1 = L * np.dot(K_inv, h1)
+    # r2 = L * np.dot(K_inv, h2)
+    # r3 = np.cross(r1, r2)
+
+    # t = L * np.dot(K_inv, h3)
+    # R = np.array([[r1], [r2], [r3]])
+    # R = np.reshape(R, (3, 3))
+
+    # return R, t
+    H = np.transpose(H)
     h1 = H[0]
     h2 = H[1]
     h3 = H[2]
-    K_inv = np.linalg.inv(K)
-    L = 1 / np.linalg.norm(np.dot(K_inv, h1))
-    r1 = L * np.dot(K_inv, h1)
-    r2 = L * np.dot(K_inv, h2)
+
+    Ainv = np.linalg.inv(K)
+
+    L = 1 / np.linalg.norm(np.dot(Ainv, h1))
+
+    r1 = L * np.dot(Ainv, h1)
+    r2 = L * np.dot(Ainv, h2)
     r3 = np.cross(r1, r2)
 
-    t = L * (K_inv @ h3.reshape(3, 1))
+    t = L * np.dot(Ainv, h3)
+
     R = np.array([[r1], [r2], [r3]])
     R = np.reshape(R, (3, 3))
+    U, S, V = np.linalg.svd(R, full_matrices=True)
+
+    U = np.matrix(U)
+    V = np.matrix(V)
+    R = U * V
+    R = np.asarray(R)
 
     return R, t
 
@@ -55,14 +80,14 @@ def calculate_homography(src, dst):
 
     return H
 
-def orb_homography(img1, img2, MIN_MATCH_COUNT=10):
+def orb_homography(src_img, dst_img, MIN_MATCH_COUNT=10):
 
     # Initiate ORB detector
     orb = cv2.ORB_create()
 
     # Find the keypoints and descriptors with ORB
-    kp1, des1 = orb.detectAndCompute(img1, None)
-    kp2, des2 = orb.detectAndCompute(img2, None)
+    kp1, des1 = orb.detectAndCompute(src_img, None)
+    kp2, des2 = orb.detectAndCompute(dst_img, None)
 
     # Create Brute-Force Matcher object
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -82,9 +107,36 @@ def orb_homography(img1, img2, MIN_MATCH_COUNT=10):
         # Calculate homography using RANSAC
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
-        return M
+        return M, mask, kp1, kp2, matches
 
     else:
         print("Not enough matches are found - %d/%d" % (len(matches),MIN_MATCH_COUNT))
         
         return None
+
+def make_mosaic(img0, img1):
+
+    # Convert images to B&W
+    gray0 = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
+    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+
+    # Obtain mask of warped images to find overlapping region
+    ret, mask0 = cv2.threshold(gray0, 1, 255, cv2.THRESH_BINARY)
+    ret, mask1 = cv2.threshold(gray1, 1, 255, cv2.THRESH_BINARY)
+
+    mask = cv2.bitwise_and(mask0, mask1)
+
+    # Find overlapping regions of both images to blend together
+    cropped0 = cv2.bitwise_and(img0, img0, mask=mask)
+    cropped1 = cv2.bitwise_and(img1, img1, mask=mask)
+
+    # Find remaining area to add on later
+    remainder0 = cv2.bitwise_and(img0, img0, mask=cv2.bitwise_not(mask))
+    remainder1 = cv2.bitwise_and(img1, img1, mask=cv2.bitwise_not(mask))
+
+    # Combine images
+    mosaic = cv2.addWeighted(cropped0, 0.5, cropped1, 0.5, 0)
+    mosaic = cv2.add(mosaic, remainder0)
+    mosaic = cv2.add(mosaic, remainder1)
+
+    return mosaic

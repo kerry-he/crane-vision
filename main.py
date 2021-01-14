@@ -32,6 +32,12 @@ src_corners = [
 
 kalman = Kalman()
 
+prev_frame = None
+H = None
+
+mosaic_shape = (1000, 1000)
+mosaic_frame = np.zeros((1000, 1000, 3), dtype='uint8')
+
 # Profiling variables
 profile_x = [[], [], [], []]
 
@@ -47,6 +53,8 @@ if vc.isOpened(): # try to get the first frame
 else:
     rval = False
 
+src_corners = src_corners + np.asarray(mosaic_shape) / 2
+
 while rval:
     tic = time.time()
 
@@ -59,7 +67,6 @@ while rval:
 
     # loop over the AprilTag detection results
     for r in results:
-        # M, _, _ = detector.detection_pose(r, (fx, fy, cx, cy), tag_size)
 
         # extract the bounding box (x, y)-coordinates for the AprilTag
         # and convert each of the (x, y)-coordinate pairs to integers
@@ -89,29 +96,43 @@ while rval:
             src = np.append(src, src_corners[r.tag_id], axis=0)
             dst = np.append(dst, r.corners, axis=0)
 
-        # H, _ = cv2.findHomography(srcPoints, np.asarray(r.corners))
-        # R, t = homography_decomposition(H, K)
-        # print(R, t)
-
     toc = time.time()
     kalman.predict_step(toc - tic)
         
     # Plot the path travelled by the marker
     if results:
         H, _ = cv2.findHomography(np.asarray(src), np.asarray(dst), cv2.RANSAC, 10.0)
+
+    elif prev_frame is not None and H is not None:
+        M, mask, kp1, kp2, matches = orb_homography(prev_frame, frame)
+
+        if M is not None:
+            H = M @ H
+
+    
+    if H is not None:
         R, t = homography_decomposition(H, K)
         
-        r = Rotation.from_matrix(R)
-        z = np.concatenate((np.squeeze(t), r.as_euler('xyz', degrees=True)))
-        kalman.update_step(z)
-        profile_x[len(results) - 1].append(z)
+        warped_frame = cv2.warpPerspective(frame, np.linalg.inv(H), dsize=mosaic_shape)
+        mosaic_frame = make_mosaic(mosaic_frame, warped_frame)
+        cv2.imshow("mosaic", mosaic_frame)
+        
+            
+        # r = Rotation.from_matrix(R)
+        # z = np.concatenate((np.squeeze(t), r.as_euler('xyz', degrees=True)))
+        # kalman.update_step(z)
+        # profile_x[len(results) - 1].append(z)
 
-        x = kalman.x[0]
-        y = kalman.x[1]
-        z = kalman.x[2]
+        # x = kalman.x[0]
+        # y = kalman.x[1]
+        # z = kalman.x[2]
 
-        r = Rotation.from_euler('xyz', kalman.x[3:6], degrees=True)
-        R = r.as_matrix()
+        # r = Rotation.from_euler('xyz', kalman.x[3:6], degrees=True)
+        # R = r.as_matrix()
+
+        x = t[0]
+        y = t[1]
+        z = t[2]
 
         plt.cla()
         ax.set_xlim(-250, 250)
@@ -123,6 +144,7 @@ while rval:
 
         plt.pause(0.01)
 
+    prev_frame = frame
 
     # show the output image after AprilTag detection
     cv2.imshow("Image", frame)

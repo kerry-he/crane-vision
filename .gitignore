@@ -1,3 +1,5 @@
 *.jpeg
 *.jpg
+*.bmp
 __pycache__
+.vscode/
