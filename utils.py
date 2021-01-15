@@ -107,7 +107,7 @@ def orb_homography(src_img, dst_img, MIN_MATCH_COUNT=10):
         # Calculate homography using RANSAC
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
-        return M, mask, kp1, kp2, matches
+        return M
 
     else:
         print("Not enough matches are found - %d/%d" % (len(matches),MIN_MATCH_COUNT))
