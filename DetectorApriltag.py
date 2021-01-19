@@ -26,8 +26,8 @@ class DetectorApriltag():
             tag_corners + [57.0, 97.0]
         ]
 
-        mosaic_shape = (1000, 1000)
-        self.src_corners += np.asarray(mosaic_shape) / 2
+        # mosaic_shape = (1000, 1000)
+        # self.src_corners += np.asarray(mosaic_shape) / 2
 
     def detetct_tags(self, img):
         if len(img.shape) > 2:

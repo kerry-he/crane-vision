@@ -6,8 +6,10 @@ from scipy.spatial.transform import Rotation
 
 from utils import *
 from kalman_filter import *
+from transfoms import *
 from DetectorApriltag import DetectorApriltag
 from CameraWebcam import CameraWebcam
+from CameraBasler import CameraBasler
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -19,8 +21,8 @@ def main():
     prev_img = None
     H = None
 
-    mosaic_shape = (1000, 1000)
-    mosaic_frame = np.zeros((1000, 1000, 3), dtype='uint8')
+    mosaic_shape = (camera.w, camera.h)
+    mosaic_frame = np.zeros((camera.h, camera.w, 3), dtype='uint8')
 
     # Create OpenCV window to continuously capture from webcam
     fig = plt.figure()
@@ -43,10 +45,12 @@ def main():
         
         if H is not None:
             R, t = homography_decomposition(H, camera.K)
+
+            test_frame = filter_swinging(img, R, t, camera.K)
             
             warped_frame = cv2.warpPerspective(img, np.linalg.inv(H), dsize=mosaic_shape)
             mosaic_frame = make_mosaic(mosaic_frame, warped_frame)
-            cv2.imshow("mosaic", mosaic_frame)
+            cv2.imshow("mosaic", test_frame)
 
             x = t[0]
             y = t[1]

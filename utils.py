@@ -89,6 +89,9 @@ def orb_homography(src_img, dst_img, MIN_MATCH_COUNT=10):
     kp1, des1 = orb.detectAndCompute(src_img, None)
     kp2, des2 = orb.detectAndCompute(dst_img, None)
 
+    if des1 is None or des2 is None:
+        return None
+
     # Create Brute-Force Matcher object
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
@@ -123,7 +126,7 @@ def make_mosaic(img0, img1):
     # Obtain mask of warped images to find overlapping region
     ret, mask0 = cv2.threshold(gray0, 1, 255, cv2.THRESH_BINARY)
     ret, mask1 = cv2.threshold(gray1, 1, 255, cv2.THRESH_BINARY)
-
+    
     mask = cv2.bitwise_and(mask0, mask1)
 
     # Find overlapping regions of both images to blend together

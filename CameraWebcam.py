@@ -13,7 +13,7 @@ class CameraWebcam():
         self.h, self.w = img.shape[:2]
 
         fx, fy, cx, cy = (739.2116337887949, 731.2693931923594,
-                          472.1271812307942, 265.5094352085958)
+                          320.0, 240.0)
         K = extrinsic_matrix(fx, fy, cx, cy)
 
         self.distortion = np.asarray(
