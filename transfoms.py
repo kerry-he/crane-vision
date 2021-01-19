@@ -14,6 +14,12 @@ def transformation_matrix(R, t):
 
     return T
 
+def translation_matrix_2d(t):
+    T = np.eye(3)
+    T[:2, 2] = t
+
+    return T
+
 
 def rotation_matrix_2d(angle, centre=(0, 0), translation=(0, 0)):
     M = np.eye(3)
@@ -39,10 +45,12 @@ def rigid_from_transform(R, t, K):
     n = np.array([0, 0, 1])
     depth = np.dot(t, n)
     l = 400
-    pendulum_offset = (l * np.sin(euler[-1]), l * (1 - np.cos(euler[-1])))
-    translation = (pendulum_offset[0] / depth * K[0, 0], pendulum_offset[1] / depth * K[1, 1])
+    pendulum_offset = np.array([l * np.sin(euler[-1]), l * (1 - np.cos(euler[-1]))]) / depth
 
-    M = rotation_matrix_2d(euler[-1], centre=(320, 240), translation=translation)
+    R = rotation_matrix_2d(euler[-1])
+    t = translation_matrix_2d(pendulum_offset)
+
+    M = K @ R @ t @ np.linalg.inv(K)
 
     return M
 
@@ -63,7 +71,6 @@ def homography_from_rotation(R, t, K):
     H = K @ R @ np.linalg.inv(K)
 
     return H
-
 
 def filter_swinging(img, R, t, K):
 
