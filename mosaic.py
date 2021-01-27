@@ -21,19 +21,19 @@ def homography_mosaic(img_src, img_dst, H1, H2, H3, H4):
     # H4: Homography used for current frame to filter
 
     H_shift = np.array([
-        [1, 0, mosaic_shape[0]/2.-cx],
-        [0, 1, mosaic_shape[1]/2.-cy],
+        [1, 0, img_src.shape[0] / 2 - img_dst.shape[0] / 2],
+        [0, 1, img_src.shape[1] / 2 - img_dst.shape[1] / 2],
         [0, 0, 1]
     ])
 
     H_src_dst = H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1)
 
-    img_src = cv2.warpPerspective(img_src, H_src_dst, dsize=mosaic_shape)
-    img2 = cv2.warpPerspective(img2, H_shift, dsize=mosaic_shape)
+    img_src = cv2.warpPerspective(img_src, H_src_dst, dsize=img_src.shape[:2])
+    img_dst = cv2.warpPerspective(img_dst, H_shift, dsize=img_src.shape[:2])
 
-    mosaic = make_mosaic(img1, img2)
+    mosaic = make_mosaic(img_src, img_dst)
 
-    return cv2.warpPerspective(mosaic, H4, dsize=mosaic_shape)
+    return cv2.warpPerspective(mosaic, H4, dsize=img_src.shape[:2])
 
 
 

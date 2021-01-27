@@ -16,14 +16,16 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 def main():
-    camera = CameraBasler()
+    camera = CameraWebcam()
     apriltag_detector = DetectorApriltag()
 
     prev_img = None
     H = None
+    H1 = np.eye(3)
+    H2 = np.eye(3)
 
-    mosaic_shape = (camera.w, camera.h)
-    mosaic_frame = np.zeros((camera.h, camera.w, 3), dtype='uint8')
+    mosaic_shape = (1000, 1000)
+    mosaic = np.zeros((1000, 1000, 3), dtype='uint8')
 
     # Create OpenCV window to continuously capture from webcam
     fig = plt.figure()
@@ -37,20 +39,23 @@ def main():
         if results:
             H = apriltag_detector.calculate_homography(results, [0, 1, 2, 3])
 
-        elif prev_img is not None and H is not None:
-            M = orb_homography(prev_img, img)
+        # elif prev_img is not None and H is not None:
+        #     M = orb_homography(prev_img, img)
 
-            if M is not None:
-                H = M @ H
+        #     if M is not None:
+        #         H = M @ H
 
         if H is not None:
             R, t = homography_decomposition(H, camera.K)
 
-            test_frame = filter_swinging(img, R, t, camera.K)
+            H4 = rigid_from_transform(R, t, camera.K)
+            
+            mosaic = homography_mosaic(mosaic, img, H1, H2, H, H4)
 
-            warped_frame = cv2.warpPerspective(img, np.linalg.inv(H), dsize=mosaic_shape)
-            mosaic_frame = make_mosaic(mosaic_frame, warped_frame)
-            cv2.imshow("mosaic", test_frame)
+            H1 = H4
+            H2 = H
+
+            cv2.imshow("mosaic", mosaic)
 
             x = t[0]
             y = t[1]
