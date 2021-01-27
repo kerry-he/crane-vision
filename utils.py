@@ -116,30 +116,3 @@ def orb_homography(src_img, dst_img, MIN_MATCH_COUNT=10):
         print("Not enough matches are found - %d/%d" % (len(matches),MIN_MATCH_COUNT))
         
         return None
-
-def make_mosaic(img0, img1):
-
-    # Convert images to B&W
-    gray0 = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
-    gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-
-    # Obtain mask of warped images to find overlapping region
-    ret, mask0 = cv2.threshold(gray0, 1, 255, cv2.THRESH_BINARY)
-    ret, mask1 = cv2.threshold(gray1, 1, 255, cv2.THRESH_BINARY)
-    
-    mask = cv2.bitwise_and(mask0, mask1)
-
-    # Find overlapping regions of both images to blend together
-    cropped0 = cv2.bitwise_and(img0, img0, mask=mask)
-    cropped1 = cv2.bitwise_and(img1, img1, mask=mask)
-
-    # Find remaining area to add on later
-    remainder0 = cv2.bitwise_and(img0, img0, mask=cv2.bitwise_not(mask))
-    remainder1 = cv2.bitwise_and(img1, img1, mask=cv2.bitwise_not(mask))
-
-    # Combine images
-    mosaic = cv2.addWeighted(cropped0, 0.5, cropped1, 0.5, 0)
-    mosaic = cv2.add(mosaic, remainder0)
-    mosaic = cv2.add(mosaic, remainder1)
-
-    return mosaic

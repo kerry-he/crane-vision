@@ -77,4 +77,4 @@ def filter_swinging(img, R, t, K):
     H = rigid_from_transform(R, t, K)
     img = cv2.warpPerspective(img, H, dsize=img.shape[1::-1])
 
-    return img
+    return img, H

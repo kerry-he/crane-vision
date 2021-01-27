@@ -54,6 +54,7 @@ class CameraBasler():
 
             # Undistort camera frame
             img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
+            img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         grabResult.Release()
         return img
