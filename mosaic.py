@@ -52,10 +52,18 @@ def make_mosaic(img0, img1):
     # Obtain mask of warped images to find overlapping region
     ret, mask0 = cv2.threshold(gray0, 1, 255, cv2.THRESH_BINARY)
     ret, mask1 = cv2.threshold(gray1, 1, 255, cv2.THRESH_BINARY)
+
+    # Sharpen image edges to remove blurring caused through image warping
+    kernal = np.ones((5, 5), np.uint8)
+    mask0 = cv2.erode(mask0, kernal, iterations=1)
+    mask1 = cv2.erode(mask1, kernal, iterations=1)
+
+    img0 = cv2.bitwise_and(img0, img0, mask=mask0)
+    img1 = cv2.bitwise_and(img1, img1, mask=mask1)
     
+    # Find overlapping regions of both images to blend together
     mask = cv2.bitwise_and(mask0, mask1)
 
-    # Find overlapping regions of both images to blend together
     cropped0 = cv2.bitwise_and(img0, img0, mask=mask)
     cropped1 = cv2.bitwise_and(img1, img1, mask=mask)
 
@@ -123,5 +131,5 @@ if __name__ == "__main__":
 
     mosaic = make_mosaic(img1, img2)
     cv2.imshow("3", mosaic)
-    cv2.imshow("4", img1)
+    # cv2.imshow("4", img1)
     cv2.waitKey(0)
