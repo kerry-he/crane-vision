@@ -29,7 +29,7 @@ class CameraBasler():
 
         # Marker and camera parameters
         fx, fy, cx, cy = (1.79783924e+03, 1.79734316e+03,
-                          1.00904154e+03, 7.47131925e+02)
+                          1.00904154e+03, 7.47131925e+02) #2064, 1544
         K = extrinsic_matrix(fx, fy, cx, cy)
 
         self.distortion = np.asarray([[-1.73606123e-01, 8.51898824e-02,
@@ -40,6 +40,10 @@ class CameraBasler():
             K, self.distortion, (self.w, self.h), 1.0, (self.w, self.h))
         self.mapx, self.mapy = cv2.initUndistortRectifyMap(
             K, self.distortion, None, self.K, (self.w, self.h), 5)
+
+        # Rotate intrinsic parameter K to account for 90CCW rotation
+        self.K = extrinsic_matrix(self.K[1, 1], self.K[0, 0], self.K[1, 2], 2064-self.K[0, 2])
+        print(self.K)
 
     def capture_frame(self):
         grabResult = self.camera.RetrieveResult(
