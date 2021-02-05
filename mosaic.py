@@ -6,11 +6,13 @@ import time
 from scipy.spatial.transform import Rotation
 
 from utils import *
-from kalman_filter import *
 from transfoms import *
 from DetectorApriltag import DetectorApriltag
 from CameraWebcam import CameraWebcam
 from CameraBasler import CameraBasler
+
+def resize_img(img, scale):
+    return cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale)))
 
 def homography_mosaic(img_src, img_dst, H1, H2, H3, H4):
     # img_src: Previous image with current mosaic
@@ -21,19 +23,19 @@ def homography_mosaic(img_src, img_dst, H1, H2, H3, H4):
     # H4: Homography used for current frame to filter
 
     H_shift = np.array([
-        [1, 0, img_src.shape[0] / 2 - img_dst.shape[0] / 2],
-        [0, 1, img_src.shape[1] / 2 - img_dst.shape[1] / 2],
+        [1, 0, img_src.shape[1] / 2 - img_dst.shape[1] / 2],
+        [0, 1, img_src.shape[0] / 2 - img_dst.shape[0] / 2],
         [0, 0, 1]
     ])
+    
+    H_src_dst = H4 @ H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1) 
 
-    H_src_dst = H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1)
+    img_src = cv2.warpPerspective(img_src, H_shift @ H_src_dst @ np.linalg.inv(H_shift), dsize=img_src.shape[1::-1])
+    img_dst = cv2.warpPerspective(img_dst, H_shift @ H4, dsize=img_src.shape[1::-1])
 
-    img_src = cv2.warpPerspective(img_src, H_src_dst, dsize=img_src.shape[:2])
-    img_dst = cv2.warpPerspective(img_dst, H_shift, dsize=img_src.shape[:2])
+    make_mosaic(img_src, img_dst)
 
-    mosaic = make_mosaic(img_src, img_dst)
-
-    return cv2.warpPerspective(mosaic, H4, dsize=img_src.shape[:2])
+    return make_mosaic(img_src, img_dst)
 
 
 
@@ -82,12 +84,15 @@ def make_mosaic(img0, img1):
 
 if __name__ == "__main__":
 
-    img1 = cv2.imread('images/test0.jpg',0)
-    img2 = cv2.imread('images/test1.jpg',0)
+    img1 = cv2.imread('images/0.png')
+    img2 = cv2.imread('images/2.png')
+    img3 = cv2.imread('images/1.png')
 
-    fx, fy, cx, cy = (739.2116337887949, 731.2693931923594,
-                        320.0, 240.0)
-    K = extrinsic_matrix(fx, fy, cx, cy)
+    K = np.array([[1.65589856e+03, 0.00000000e+00, 7.45973980e+02],
+                  [0.00000000e+00, 1.65939697e+03, 1.05925386e+03],
+                  [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
+    cx = int(K[0, 2])
+    cy = int(K[0, 1])
 
     M = cv2.getRotationMatrix2D((cx, cy), -10.0, 1.0)
     img1 = cv2.warpAffine(img1, M, img1.shape[1::-1])
@@ -97,39 +102,59 @@ if __name__ == "__main__":
 
     results1 = apriltag_detector.detetct_tags(img1)
     results2 = apriltag_detector.detetct_tags(img2)
+    results3 = apriltag_detector.detetct_tags(img3)
 
     H2 = apriltag_detector.calculate_homography(results1, [0, 1, 2, 3])
     H3 = apriltag_detector.calculate_homography(results2, [0, 1, 2, 3])
+    H3_p = apriltag_detector.calculate_homography(results3, [0, 1, 2, 3])
 
     R1, t1 = homography_decomposition(H2, K)
     R2, t2 = homography_decomposition(H3, K)
-
-    print(R1, t1)
-    print(R2, t2)
+    R3, t3 = homography_decomposition(H3_p, K)
 
     img1, H1 = filter_swinging(img1, R1, t1, K)
-    test_frame, H4 = filter_swinging(img2, R2, t2, K)
+    temp, H4 = filter_swinging(img2, R2, t2, K)
+    temp, H4_p = filter_swinging(img3, R3, t3, K)
 
-    # cv2.imshow("1", img1)
+    # cv2.imshow("1", resize_img(img1, 0.25))
     # cv2.waitKey(0)
     # img1 = cv2.warpPerspective(img1, np.linalg.inv(H1), dsize=img1.shape[1::-1])
-    # cv2.imshow("2", img1)
+    # cv2.imshow("2", resize_img(img1, 0.25))
     # cv2.waitKey(0)
     # img1 = cv2.warpPerspective(img1, H3 @ np.linalg.inv(H2), dsize=img1.shape[1::-1])
-    # cv2.imshow("3", img1)
+    # cv2.imshow("3", resize_img(img1, 0.25))
     # cv2.waitKey(0)
 
-    H_shift = np.array([
-        [1, 0, mosaic_shape[0]/2.-cx],
-        [0, 1, mosaic_shape[1]/2.-cy],
-        [0, 0, 1]
-    ])
+    # H_shift = np.array([
+    #     [1, 0, mosaic_shape[0]/2.-cx],
+    #     [0, 1, mosaic_shape[1]/2.-cy],
+    #     [0, 0, 1]
+    # ])
 
-    H_ultra = H_shift @ H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1)
-    img1 = cv2.warpPerspective(img1, H_ultra, dsize=mosaic_shape)
-    img2 = cv2.warpPerspective(img2, H_shift, dsize=mosaic_shape)
+    # H_ultra = H_shift @ H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1)
+    # img1 = cv2.warpPerspective(img1, H_ultra, dsize=mosaic_shape)
+    # img2 = cv2.warpPerspective(img2, H_shift, dsize=mosaic_shape)
 
-    mosaic = make_mosaic(img1, img2)
-    cv2.imshow("3", mosaic)
-    # cv2.imshow("4", img1)
+    # mosaic = make_mosaic(img1, img2)
+    # # cv2.imshow("4", resize_img(mosaic, 0.25))
+    # mosaic = homography_mosaic(img1, img2, H1, H2, H3, H4)
+    # cv2.imshow("5", resize_img(mosaic, 0.25))
+    # cv2.imshow("5", resize_img(homography_mosaic(mosaic, img3, H4, H3, H3_p, H4_p), 0.25))
+
+
+    mosaic = np.zeros((4000, 4000, 3), dtype='uint8')
+
+    H1 = np.eye(3)
+    H2 = np.eye(3)
+
+    mosaic = homography_mosaic(mosaic, img1, np.eye(3), np.eye(3), H2, H1)
+    cv2.imshow("4", resize_img(mosaic, 0.25))
+    mosaic = homography_mosaic(mosaic, img2, H1, H2, H3, H4)
+    cv2.imshow("5", resize_img(mosaic, 0.25))
+    mosaic = homography_mosaic(mosaic, img3, H4, H3, H3_p, H4_p)
+    cv2.imshow("6", resize_img(mosaic, 0.25))
+       
+
+
+
     cv2.waitKey(0)
