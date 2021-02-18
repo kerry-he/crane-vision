@@ -63,6 +63,12 @@ for i in range(len(R_I)):
     t_filtered.append(filtered + t_K[i])
 
 
+offset_K = np.array([
+    [0., 1., 0.],
+    [-1., 0., 0.],
+    [0., 0., 1.]
+])
+
 for i in range(len(R_I)):
 
     print(np.linalg.norm(t_I[i] - t_K[i]))

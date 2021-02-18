@@ -32,15 +32,29 @@ def read_waypoints(file_name, scale):
     R_list, t_list = read_csv_tf(file_name)
 
     R_90_z = Quaternion(axis=[0., 0., 1.], radians=np.pi/2.).rotation_matrix
-    R_90_z = RigidTransform(rotation=R_90_z, from_frame="world")
+    R_90_z_T = RigidTransform(rotation=R_90_z, from_frame="world")
+
+    t_R = np.array([
+        [0., -1., 0.],
+        [0., 0., 1.],
+        [-1., 0., 0.]
+    ])
+    t_R_T = RigidTransform(rotation=t_R, from_frame="world")
+
+    offset_K = np.array([
+        [0., 1., 0.],
+        [-1., 0., 0.],
+        [0., 0., 1.]
+    ])
 
     for i in range(len(R_list)):
         rotation = Quaternion(axis=[1., 0., 0.], angle=np.pi/12).rotation_matrix
-        R = R_list[i]#np.eye(3)#rotation#R_list[i]
+        R = np.matmul(np.matmul(np.linalg.inv(t_R), np.matmul(R_list[i], np.linalg.inv(offset_K))), t_R)#np.eye(3)#rotation#R_list[i]
         t = t_list[i] * scale
-        # t = np.matmul(R_90_z.rotation, t)
+        t = np.matmul(np.linalg.inv(t_R), t)
+        print(t)
         T = RigidTransform(rotation=R, translation=t, from_frame="world")
-        T = R_90_z * T
+        # T = R_90_z_T * T
         waypoints.append(T)
 
         top_row = False
@@ -68,6 +82,7 @@ def sinusoid_waypoints():
 
 	for i in range(150):
 		theta = np.cos(i / 10.)/2
+		origin[0] = -np.sin(np.cos(i / 20.)/2) * 0.3
 
 		x = origin[0] - l * np.sin(theta)
 		y = origin[1]
@@ -84,12 +99,17 @@ def sinusoid_waypoints():
 def custom_waypoints():
     # Generate a pendulum-like motion for the robot to follow
     origin = np.array([0., 0., 0.20])
-    l = 0.20
 
     waypoints = []
 
+    t_K = np.array([
+        [0., 1., 0.],
+        [-1., 0., 0.],
+        [0., 0., 1.]
+    ])
+
     for i in range(150):
-        theta = np.cos(i / 10.)
+        theta = np.sin(i / 10.)
         R = Quaternion(axis=[0., 0., 1.], radians=theta/4.).rotation_matrix
         T = RigidTransform(rotation=R, from_frame="world")
         waypoints.append(T)

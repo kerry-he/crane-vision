@@ -37,7 +37,7 @@ def rotation_matrix_2d(angle, centre=(0, 0), translation=(0, 0)):
     return M
 
 
-def rigid_from_transform(R, t, K):
+def crane_transform_2d(R, t, K):
     # Find Euler rotation to isolate z rotation
     r = Rotation.from_matrix(R)
     euler = r.as_euler('xyz')
@@ -49,7 +49,7 @@ def rigid_from_transform(R, t, K):
 
     # pendulum_offset = np.array([l * np.sin(-euler[-1]), l * (1 - np.cos(-euler[-1]))]) / depth
     # pendulum_offset = np.array([200., 0., 0.])
-    pendulum_offset = (np.eye(3) - np.linalg.inv(R)) @ np.array([0., l, 0.]) / depth
+    pendulum_offset = np.matmul((np.eye(3) - np.linalg.inv(R)), np.array([0., l, 0.])) / depth
     # pendulum_offset = np.linalg.inv(R) @ pendulum_offset
     # print(pendulum_offset)
 
@@ -61,7 +61,7 @@ def rigid_from_transform(R, t, K):
     
 
     # M = np.matmul(K, np.matmul(R, np.matmul(t, np.linalg.inv(K))))
-    M = K @ R @ t @ np.linalg.inv(K)
+    M = np.matmul(K, np.matmul(R, np.matmul(t, np.linalg.inv(K))))
 
     return M
 
@@ -84,12 +84,12 @@ def rigid_from_transform(R, t, K):
 #     return H
 
 
-def complete_transform(R, t, K):
+def crane_transform_3d(R, t, K):
     n = np.array([0, 0, 1])
-    depth = np.dot(t, n)
+    depth = np.dot(np.matmul(R, t), n)
 
     l = 200.
-    pendulum_offset = -(np.eye(3) - np.linalg.inv(R)) @ np.array([0., l, 0.])
+    pendulum_offset = -np.matmul((np.eye(3) - np.linalg.inv(R)), np.array([0., l, 0.]))
 
     # target_depth = depth + pendulum_offset[2]
 
@@ -103,14 +103,14 @@ def complete_transform(R, t, K):
 
     # R = T[:3, :3]
     # t_temp = -T[:3, 3]
-    depth2 = (R @ np.array([[0, 0, depth]]).T)[2]
+    depth2 = (np.matmul(R, np.array([[0, 0, depth]]).T))[2]
     # t = R @ t
     # t[2] -= 1000
     # print(t)
-    t_rot = R @ t
-    t_rot[2] -= 1000
-    H = R #- np.reshape(-t, (3, 1)) @ np.array([[0., 0., 1.]]) / depth
-    H2 = np.eye(3) - np.reshape((R @ pendulum_offset), (3, 1)) @ np.array([[0., 0., 1.]]) / depth
+    # t_rot = R @ t
+    # t_rot[2] -= 1000
+    H = R #- np.reshape(t_rot, (3, 1)) @ np.array([[0., 0., 1.]]) / depth
+    H2 = np.eye(3) - np.matmul(np.reshape(np.matmul(R, pendulum_offset), (3, 1)), np.array([[0., 0., 1.]])) / depth2
 
     
     # # print(depth2)
@@ -123,7 +123,34 @@ def complete_transform(R, t, K):
     # print(t)
     # H3 = np.eye(3) - np.reshape(pendulum_offset, (3, 1)) @ np.array([[0., 0., 1.]]) / depth
 
-    H = K @ H2 @ H @ np.linalg.inv(K)
+    H = np.matmul(K, np.matmul(H2, np.matmul(H, np.linalg.inv(K))))
+
+    return H
+
+
+def crane_transform_given(t_boom, t_boom_origin, K, d_camera_origin):
+    # Translations in global frame
+    offset = t_boom - t_boom_origin
+    offset[2] *= -1
+
+    H = np.eye(3) - np.matmul(np.reshape((offset), (3, 1)), np.array([[0., 0., 1.]])) / d_camera_origin
+
+    H = np.matmul(K, np.matmul(H, np.linalg.inv(K)))
+
+    return H
+
+
+def crane_transform_depth(R, t, K, min_depth):
+    n = np.array([0, 0, 1])
+    depth = np.dot(np.matmul(R, t), n)
+
+    # Translations in global frame
+    if depth < min_depth:
+        offset = np.array([0., 0., depth - min_depth])
+        H = np.eye(3) - np.matmul(np.reshape((offset), (3, 1)), np.array([[0., 0., 1.]])) / depth
+        H = np.matmul(K, np.matmul(H, np.linalg.inv(K)))
+    else:
+        H = np.eye(3)
 
     return H
 

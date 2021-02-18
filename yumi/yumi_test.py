@@ -28,7 +28,7 @@ if __name__ == '__main__':
 	raw_input("Press enter to move to begin pose...")
 
 	# Y.left.goto_state(PoseCalibrationLeft)	
-	Y.left.goto_state(PoseOrigin)
+	# Y.left.goto_state(PoseOrigin)
 
 	# Set robot to origin
 
@@ -49,9 +49,9 @@ if __name__ == '__main__':
 
 	print(Y.left.get_state())
 
-	# waypoints = read_waypoints("link_K_4.csv", scale=0.2)
-	# waypoints = sinusoid_waypoints()
-	waypoints = custom_waypoints()
+	# waypoints = read_waypoints("link_K_1.csv", scale=0.2)
+	waypoints = sinusoid_waypoints()
+	# waypoints = custom_waypoints()
 
 	
 

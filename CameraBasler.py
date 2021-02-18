@@ -6,7 +6,7 @@ from utils import *
 
 
 class CameraBasler():
-    def __init__(self):
+    def __init__(self, scale=1.0):
         # Conecting to the first available camera
         self.camera = pylon.InstantCamera(
             pylon.TlFactory.GetInstance().CreateFirstDevice())
@@ -43,6 +43,12 @@ class CameraBasler():
 
         # Rotate intrinsic parameter K to account for 90CCW rotation
         self.K = extrinsic_matrix(self.K[1, 1], self.K[0, 0], self.K[1, 2], 2064-self.K[0, 2])
+
+        # Scale image
+        self.K[:2, :] *= scale
+        self.h = int(self.h * scale)
+        self.w = int(self.w * scale)
+        self.scale = scale
         print(self.K)
 
     def capture_frame(self):
@@ -59,6 +65,7 @@ class CameraBasler():
             # Undistort camera frame
             img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
             img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            img = cv2.resize(img, (int(img.shape[1]*self.scale), int(img.shape[0]*self.scale)))
 
         grabResult.Release()
         return img
