@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import time
 
 import apriltag
 import time
@@ -28,14 +29,18 @@ def homography_mosaic(img_src, img_dst, H1, H2, H3, H4):
         [0, 0, 1]
     ])
     
-    H_src_dst = H4 @ H3 @ np.linalg.inv(H2) @ np.linalg.inv(H1) 
+    H_src_dst = np.matmul(H4, np.matmul(H3, np.matmul(np.linalg.inv(H2), np.linalg.inv(H1))))
+    
+    # # Alternative method
+    # img_dst = cv2.warpPerspective(img_dst, H_shift @ H1 @ H2 @ np.linalg.inv(H3), dsize=img_src.shape[1::-1])
+    # mosaic = make_mosaic(img_src, img_dst)
+    # mosaic = cv2.warpPerspective(mosaic, H_shift @ H_src_dst @ np.linalg.inv(H_shift), dsize=img_src.shape[1::-1])
+    
+    img_src = cv2.warpPerspective(img_src, np.matmul(H_shift, np.matmul(H_src_dst, np.linalg.inv(H_shift))), dsize=img_src.shape[1::-1], flags=cv2.INTER_NEAREST)
+    img_dst = cv2.warpPerspective(img_dst, np.matmul(H_shift, H4), dsize=img_src.shape[1::-1], flags=cv2.INTER_NEAREST)
+    mosaic = make_mosaic(img_src, img_dst)
 
-    img_src = cv2.warpPerspective(img_src, H_shift @ H_src_dst @ np.linalg.inv(H_shift), dsize=img_src.shape[1::-1])
-    img_dst = cv2.warpPerspective(img_dst, H_shift @ H4, dsize=img_src.shape[1::-1])
-
-    make_mosaic(img_src, img_dst)
-
-    return make_mosaic(img_src, img_dst)
+    return mosaic
 
 
 
@@ -57,10 +62,10 @@ def make_mosaic(img0, img1):
 
     # Sharpen image edges to remove blurring caused through image warping
     kernal = np.ones((5, 5), np.uint8)
-    mask0 = cv2.erode(mask0, kernal, iterations=1)
+    # mask0 = cv2.erode(mask0, kernal, iterations=1)
     mask1 = cv2.erode(mask1, kernal, iterations=1)
 
-    img0 = cv2.bitwise_and(img0, img0, mask=mask0)
+    # img0 = cv2.bitwise_and(img0, img0, mask=mask0)
     img1 = cv2.bitwise_and(img1, img1, mask=mask1)
     
     # Find overlapping regions of both images to blend together

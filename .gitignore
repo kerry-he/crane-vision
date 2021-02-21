@@ -3,3 +3,6 @@
 *.bmp
 __pycache__
 .vscode/
+*.pyc
+*.csv
+*.mp4

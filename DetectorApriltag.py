@@ -11,7 +11,7 @@ class DetectorApriltag():
         options = apriltag.DetectorOptions(families="tag36h11")
         self.detector = apriltag.Detector(options)
 
-        tag_size = 38.0
+        tag_size = 40.0
         tag_corners = np.array([
             [-tag_size / 2, -tag_size / 2], 
             [tag_size / 2, -tag_size / 2], 
@@ -19,11 +19,22 @@ class DetectorApriltag():
             [-tag_size / 2, tag_size / 2]
         ])
 
+        # self.src_corners = [
+        #     tag_corners + [-56.5, -96.5],
+        #     tag_corners + [56.5, -96.5],
+        #     tag_corners + [-56.5, 96.5],
+        #     tag_corners + [56.5, 96.5]
+        # ]
+
         self.src_corners = [
-            tag_corners + [-57.0, -97.0],
-            tag_corners + [57.0, -97.0],
-            tag_corners + [-57.0, 97.0],
-            tag_corners + [57.0, 97.0]
+            tag_corners + [-60., -103.],
+            tag_corners + [60., -103.],
+            tag_corners + [-60., 103.],
+            tag_corners + [60., 103.],
+            tag_corners + [0., -103.],
+            tag_corners + [60., 0.],
+            tag_corners + [0., 103.],
+            tag_corners + [-60., 0.]
         ]
 
         # mosaic_shape = (1000, 1000)
