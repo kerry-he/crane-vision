@@ -13,7 +13,7 @@ from yumipy import YuMiMotionPlanner
 from autolab_core import RigidTransform
 
 # Own libraries
-from read_waypoints import *
+import waypoints
 
 class RobotYumi():
     def __init__(self):
@@ -59,9 +59,9 @@ class RobotYumi():
 
         # Read waypoints
         scale = 0.15
-        self.waypoints = read_waypoints("data/waypoints/link_K_1.csv", scale=scale)
-        # self.waypoints = pendulum_waypoints()
-        # self.waypoints = rotational_waypoints()
+        self.waypoints = waypoints.read_waypoints("data/waypoints/link_K_1.csv", scale=scale)
+        # self.waypoints = waypoints.pendulum_waypoints()
+        # self.waypoints = waypoints.rotational_waypoints()
 
         for i, w in enumerate(self.waypoints):
             self.waypoints[i] = self.t_origin * w * self.gripper_offset * self.R_origin

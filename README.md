@@ -34,6 +34,15 @@ SAVE_POSE = True # Note ground truth is only availible in YuMi mode
 SHOW_MOSAIC = True
 SHOW_APRILTAG_DETECTION = True
 ```
+
+The specified trajectory of the YuMi can be changed in `RobotYumi.py`:
+```python
+self.waypoints = waypoints.read_waypoints("data/waypoints/link_K_1.csv", scale=scale)
+# self.waypoints = waypoints.pendulum_waypoints()
+# self.waypoints = waypoints.rotational_waypoints()
+```
+The exact definition of these trajectories can be found and changed in `waypoints.py`.
+
 If the `SAVE_VIDEO` and/or `SAVE_POSE` booleans are toggled `True`, the output files will be output into the `data` folder.
 
 
@@ -43,6 +52,7 @@ To move the YuMi using the specified trajectory independantly from the image sta
 ```bash
 $ python RobotYumi.py
 ```
+This can be used in conjunction with `main.py` if `USE_YUMI` is specified to be `False`.
 
 To visualise a 3D animation of the CSV waypoints, run:
 ```bash
@@ -53,4 +63,4 @@ To [calibrate](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutori
 ```bash
 $ python calibrate_camera.py
 ```
-
+The printed parameters can then be copied into `Camera.py` as needed.
