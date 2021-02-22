@@ -20,7 +20,7 @@ objp[:,:2] = np.mgrid[0:patternsize[0], 0:patternsize[1]].T.reshape(-1, 2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-folder = "calibration"
+folder = "data/calibration"
 images = os.listdir(folder)
 
 for i, fname in enumerate(images):
