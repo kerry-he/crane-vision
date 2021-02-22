@@ -34,5 +34,23 @@ SAVE_POSE = True # Note ground truth is only availible in YuMi mode
 SHOW_MOSAIC = True
 SHOW_APRILTAG_DETECTION = True
 ```
+If the `SAVE_VIDEO` and/or `SAVE_POSE` booleans are toggled `True`, the output files will be output into the `data` folder.
 
+
+There are a couple of other useful scripts that can be used.
+
+To move the YuMi using the specified trajectory independantly from the image stabilization algorithm in `main.py`, run:
+```bash
+$ python RobotYumi.py
+```
+
+To visualise a 3D animation of the CSV waypoints, run:
+```bash
+$ python visualise_waypoints.py
+```
+
+To [calibrate](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html) a camera from images in the folder `data/calibration` of a checkerboard to obtain extrinsic camera parameters and distortion parameters, run:
+```bash
+$ python calibrate_camera.py
+```
 
