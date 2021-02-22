@@ -1,12 +1,17 @@
+##################################################################
+# CALIBRATE CAMERA
+# Script which reads images from a specified folder and calculates
+# the extrinsic camera parameters and distortion parameters.
+##################################################################
+
+# Libraries
 import numpy as np
 import cv2
 import os
-import time
 
-# termination criteria
+# Termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 patternsize = (7, 10)
 objp = np.zeros((patternsize[0] * patternsize[1], 3), np.float32)
 objp[:,:2] = np.mgrid[0:patternsize[0], 0:patternsize[1]].T.reshape(-1, 2)
@@ -15,7 +20,7 @@ objp[:,:2] = np.mgrid[0:patternsize[0], 0:patternsize[1]].T.reshape(-1, 2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-folder = "webcam_calibration"
+folder = "calibration"
 images = os.listdir(folder)
 
 for i, fname in enumerate(images):

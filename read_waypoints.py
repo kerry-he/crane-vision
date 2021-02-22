@@ -1,11 +1,18 @@
+##################################################################
+# WAYPOINTS
+# Functions to read wayopint CSV files, or generate custom paths.
+##################################################################
+
+# Libraries
 import numpy as np
+import csv
 from pyquaternion import Quaternion
 
+# yumipy imports
 from autolab_core import RigidTransform
 
-import csv
-
 def read_csv_tf(file_name):
+    # Reads input CSV file and stores in R and t arrays
     R_list = []
     t_list = []
 
@@ -27,53 +34,42 @@ def read_csv_tf(file_name):
     return R_list, t_list
 
 def read_waypoints(file_name, scale):
+    # Generate RigidTransform waypoints and transform them to the correct frame from CSV file
+
     waypoints = []
 
     R_list, t_list = read_csv_tf(file_name)
 
-    R_90_z = Quaternion(axis=[0., 0., 1.], radians=np.pi/2.).rotation_matrix
-    R_90_z_T = RigidTransform(rotation=R_90_z, from_frame="world")
-
-    t_R = np.array([
+    # Define rotation matrices of gripper and K coordinate frames
+    R_gripper = np.array([
         [0., -1., 0.],
         [0., 0., 1.],
         [-1., 0., 0.]
     ])
-    t_R_T = RigidTransform(rotation=t_R, from_frame="world")
 
-    offset_K = np.array([
+    R_K = np.array([
         [0., 1., 0.],
         [-1., 0., 0.],
         [0., 0., 1.]
     ])
 
     for i in range(len(R_list)):
-        rotation = Quaternion(axis=[1., 0., 0.], angle=np.pi/12).rotation_matrix
-        R = np.matmul(np.matmul(np.linalg.inv(t_R), np.matmul(R_list[i], np.linalg.inv(offset_K))), t_R)#np.eye(3)#rotation#R_list[i]
+        R = np.matmul(np.matmul(np.linalg.inv(R_gripper), np.matmul(R_list[i], np.linalg.inv(R_K))), R_gripper)
         t = t_list[i] * scale
-        t = np.matmul(np.linalg.inv(t_R), t)
-        print(t)
+        t = np.matmul(np.linalg.inv(R_gripper), t)
         T = RigidTransform(rotation=R, translation=t, from_frame="world")
-        # T = R_90_z_T * T
         waypoints.append(T)
 
-        top_row = False
+    offset = -waypoints[0].translation
+    offset_T = RigidTransform(translation=offset, from_frame="world")
 
-    offset = waypoints[0].translation
-    offset_T = RigidTransform(translation=-offset, from_frame="world")
-
+    # Set initial waypoint as origin
     for i, w in enumerate(waypoints):
         waypoints[i] = offset_T * w    
 
     return waypoints
 
-def transform_waypoints(waypoints, T):
-    for i, w in enumerate(waypoints):
-        waypoints[i] = T * w
-
-    return waypoints
-
-def sinusoid_waypoints():
+def pendulum_waypoints():
 	# Generate a pendulum-like motion for the robot to follow
 	origin = np.array([0., 0., 0.20])
 	l = 0.20
@@ -82,8 +78,10 @@ def sinusoid_waypoints():
 
 	for i in range(150):
 		theta = np.cos(i / 10.)/2
+        # Add in translational component to pivot
 		origin[0] = -np.sin(np.cos(i / 20.)/2) * 0.3
 
+        # Calculate swinging displacement and orientation
 		x = origin[0] - l * np.sin(theta)
 		y = origin[1]
 		z = origin[2] - l * np.cos(theta)
@@ -96,17 +94,11 @@ def sinusoid_waypoints():
 
 	return waypoints
 
-def custom_waypoints():
-    # Generate a pendulum-like motion for the robot to follow
+def rotational_waypoints():
+    # Generate waypoints which rotates about a specified axis
     origin = np.array([0., 0., 0.20])
 
     waypoints = []
-
-    t_K = np.array([
-        [0., 1., 0.],
-        [-1., 0., 0.],
-        [0., 0., 1.]
-    ])
 
     for i in range(150):
         theta = np.sin(i / 10.)
@@ -115,7 +107,3 @@ def custom_waypoints():
         waypoints.append(T)
 
     return waypoints
-
-if __name__ == "__main__":
-    waypoints = read_waypoints("link_K_1.csv", 0.1)
-    print(waypoints)

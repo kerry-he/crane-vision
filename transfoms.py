@@ -1,21 +1,16 @@
+##################################################################
+## TRANSFORMS
+## Library which contains functions required to calculate 
+## homographies from given Euclidian transforms.
+##################################################################
+
+# Libraries
 import numpy as np
-import time
 import cv2
-from pyquaternion import Quaternion
-from scipy.spatial.transform import Rotation
-
-
-def transformation_matrix(R=np.eye(3), t=np.zeros(3)):
-    R = np.asarray(R)
-    t = np.reshape(t, 3)
-
-    T = np.eye(4)
-    T[:3, :3] = R
-    T[:3, 3] = t
-
-    return T
+import transforms3d
 
 def translation_matrix_2d(t):
+    # Create a 3x3 perspective transform matrix corresponding to a 2D translation
     T = np.eye(3)
     T[:2, 2] = t
 
@@ -23,141 +18,115 @@ def translation_matrix_2d(t):
 
 
 def rotation_matrix_2d(angle, centre=(0, 0), translation=(0, 0)):
+    # Create a 3x3 perspective transform matrix corresponding to a 2D rotation
     M = np.eye(3)
     c, s = np.cos(angle), np.sin(angle)
 
+    # Insert 2D rotation matrix component
     M[:2, :2] = np.array(((c, -s), (s, c)))
 
+    # Insert centering translation component
     M[:2, 2] = np.array([(1 - c) * centre[0] + s * centre[1],
-                  -s * centre[0] + (1 - c) * centre[1]])
+                         -s * centre[0] + (1 - c) * centre[1]])
 
+    # Insert additional translational component
     M[:2, 2] += np.array([c * translation[0] - s * translation[1],
-                  s * translation[0] + c * translation[1]])
+                          s * translation[0] + c * translation[1]])
 
     return M
 
 
-def crane_transform_2d(R, t, K):
-    # Find Euler rotation to isolate z rotation
-    r = Rotation.from_matrix(R)
-    euler = r.as_euler('xyz')
+def homography_from_transform(R=np.eye(3), t=np.zeros(3), n=np.zeros(3), d=1.):
+    # Calculate Euclidian homography from given 3D transform
+    t = np.reshape(t, (3, 1))
+    n = np.reshape(n, (1, 3))
 
-    # Calculate translation required to always centre the marker
-    n = np.array([0, 0, 1])
-    depth = np.dot(t, n)
-    l = 200
-
-    # pendulum_offset = np.array([l * np.sin(-euler[-1]), l * (1 - np.cos(-euler[-1]))]) / depth
-    # pendulum_offset = np.array([200., 0., 0.])
-    pendulum_offset = np.matmul((np.eye(3) - np.linalg.inv(R)), np.array([0., l, 0.])) / depth
-    # pendulum_offset = np.linalg.inv(R) @ pendulum_offset
-    # print(pendulum_offset)
-
-    # print(-t[:2] / depth)
-    # print("")
-
-    R = rotation_matrix_2d(euler[-1])
-    t = translation_matrix_2d(pendulum_offset[:2])
-    
-
-    # M = np.matmul(K, np.matmul(R, np.matmul(t, np.linalg.inv(K))))
-    M = np.matmul(K, np.matmul(R, np.matmul(t, np.linalg.inv(K))))
-
-    return M
-
-
-# def homography_from_transform(R, t, K):
-
-#     t = np.reshape(t, (3, 1))
-#     d = np.array([[0, 0, 1]]) / t[-1]
-#     H_euclidian = R + t @ d
-
-#     H = K @ H_euclidian @ np.linalg.inv(K)
-
-#     return H
-
-
-# def homography_from_rotation(R, t, K):
-
-#     H = K @ R @ np.linalg.inv(K)
-
-#     return H
-
-
-def crane_transform_3d(R, t, K):
-    n = np.array([0, 0, 1])
-    depth = np.dot(np.matmul(R, t), n)
-
-    l = 200.
-    pendulum_offset = -np.matmul((np.eye(3) - np.linalg.inv(R)), np.array([0., l, 0.]))
-
-    # target_depth = depth + pendulum_offset[2]
-
-    # # R = Rotation.from_euler('xyz', [i, 0, 0], degrees=True).as_matrix()
-    # offset = -(np.eye(3) - R) @ np.array([[0, 0, target_depth]]).T
-
-    # R = transformation_matrix(R=R)
-    # # t = transformation_matrix(t=[0, 0, depth])
-
-    # T = R
-
-    # R = T[:3, :3]
-    # t_temp = -T[:3, 3]
-    depth2 = (np.matmul(R, np.array([[0, 0, depth]]).T))[2]
-    # t = R @ t
-    # t[2] -= 1000
-    # print(t)
-    # t_rot = R @ t
-    # t_rot[2] -= 1000
-    H = R #- np.reshape(t_rot, (3, 1)) @ np.array([[0., 0., 1.]]) / depth
-    H2 = np.eye(3) - np.matmul(np.reshape(np.matmul(R, pendulum_offset), (3, 1)), np.array([[0., 0., 1.]])) / depth2
-
-    
-    # # print(depth2)
-    
-
-    # # offset_from_center = np.reshape(t, (1, 3))
-    # # offset_from_center[0, 2] = -target_depth + offset_from_center[0, 2] 
-
-    # H2 = np.eye(3) - np.reshape(-t, (3, 1)) @ np.array([[0., 0., 1.]]) / depth2
-    # print(t)
-    # H3 = np.eye(3) - np.reshape(pendulum_offset, (3, 1)) @ np.array([[0., 0., 1.]]) / depth
-
-    H = np.matmul(K, np.matmul(H2, np.matmul(H, np.linalg.inv(K))))
+    H = R - np.matmul(t, n) / d
 
     return H
 
 
-def crane_transform_given(t_boom, t_boom_origin, K, d_camera_origin):
-    # Translations in global frame
-    offset = t_boom - t_boom_origin
-    offset[2] *= -1
+def crane_transform_2d(R, t, K):
+    # Calculate homography transform to remove single pendulum swinging displacement
+    # on a 2D plane
 
-    H = np.eye(3) - np.matmul(np.reshape((offset), (3, 1)), np.array([[0., 0., 1.]])) / d_camera_origin
+    # Calculate depth to image plane
+    n = np.array([0., 0., 1.])
+    depth = np.dot(np.matmul(R, t), n)
 
+    # Find Euler rotation to isolate z rotation to estimate 2D rotation
+    euler = transforms3d.euler.mat2euler(R)
+    psi = euler[-1]
+
+    # Calculate offset assuming single pendulum model
+    l = 200.
+    pendulum_offset = np.matmul(
+        (np.eye(3) - np.linalg.inv(R)), np.array([0., l, 0.]))
+
+    # Calculate homography transform
+    R = rotation_matrix_2d(psi)
+    t = translation_matrix_2d(pendulum_offset[:2] / depth)
+
+    # H = K @ R @ t @ inv(K)
+    H = np.matmul(K, np.matmul(R, np.matmul(t, np.linalg.inv(K))))
+
+    return H
+
+
+def crane_transform_3d(R, t, K):
+    # Calculate homography transform to remove single pendulum swinging displacement
+    # in 3D space
+
+    # Calculate depth to image plane
+    n = np.array([0., 0., 1.])
+    depth = np.dot(np.matmul(R, t), n)
+    depth_after_rotation = (np.matmul(R, np.array([[0, 0, depth]]).T))[2]
+
+    # Calculate offset assuming single pendulum model
+    l = 200.
+    pendulum_offset = np.matmul(
+        (np.linalg.inv(R) - np.eye(3)), np.array([0., l, 0.]))
+    pendulum_offset = np.matmul(R, pendulum_offset)
+
+    # Calculate homography transform
+    H_rotation = R
+    H_translation = homography_from_transform(
+        t=pendulum_offset, n=n, d=depth_after_rotation)
+
+    # H = K @ H_translation @ H_rotation @ inv(K)
+    H = np.matmul(K, np.matmul(
+        H_translation, np.matmul(H_rotation, np.linalg.inv(K))))
+
+    return H
+
+
+def crane_transform_given(t_boom, t_boom_origin, d_camera_origin, H_camera, H_camera_origin, K):
+    # Calculate homography transform to follow movement of boom
+    n = np.array([0., 0., 1.])
+
+    # Calculate total displacement of boom from origin position
+    t = t_boom - t_boom_origin
+    t[2] *= -1
+
+    # Calculate homogaphy transform
+    H = homography_from_transform(t=t, n=n, d=d_camera_origin)
     H = np.matmul(K, np.matmul(H, np.linalg.inv(K)))
+    H = np.matmul(H, np.matmul(H_camera_origin, np.linalg.inv(H_camera)))
 
     return H
 
 
 def crane_transform_depth(R, t, K, min_depth):
-    n = np.array([0, 0, 1])
+    # Calculate homography transform to remain a distance > min_depth away from marker
+    n = np.array([0., 0., 1.])
     depth = np.dot(np.matmul(R, t), n)
 
-    # Translations in global frame
+    # Calculate homography transform
     if depth < min_depth:
-        offset = np.array([0., 0., depth - min_depth])
-        H = np.eye(3) - np.matmul(np.reshape((offset), (3, 1)), np.array([[0., 0., 1.]])) / depth
+        t = np.array([0., 0., depth - min_depth])
+        H = homography_from_transform(t=t, n=n, d=depth)
         H = np.matmul(K, np.matmul(H, np.linalg.inv(K)))
     else:
         H = np.eye(3)
 
     return H
-
-
-def filter_swinging(img, R, t, K):
-
-    H = complete_transform(R, t, K)
-    img = cv2.warpPerspective(img, H, dsize=img.shape[1::-1])
-
-    return img, H

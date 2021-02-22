@@ -1,8 +1,13 @@
+##################################################################
+## APRILTAG
+## Helper class to use the AprilTag library to detect tags and 
+## calculate corresponding homgoraphy transforms.
+##################################################################
+
+# Libraries
 import apriltag
 import cv2
 import numpy as np
-
-from utils import *
 
 class DetectorApriltag():
     def __init__(self):
@@ -11,6 +16,7 @@ class DetectorApriltag():
         options = apriltag.DetectorOptions(families="tag36h11")
         self.detector = apriltag.Detector(options)
 
+        # Define size of AprilTags
         tag_size = 40.0
         tag_corners = np.array([
             [-tag_size / 2, -tag_size / 2], 
@@ -19,13 +25,7 @@ class DetectorApriltag():
             [-tag_size / 2, tag_size / 2]
         ])
 
-        # self.src_corners = [
-        #     tag_corners + [-56.5, -96.5],
-        #     tag_corners + [56.5, -96.5],
-        #     tag_corners + [-56.5, 96.5],
-        #     tag_corners + [56.5, 96.5]
-        # ]
-
+        # Define tag positions of AprilTags
         self.src_corners = [
             tag_corners + [-60., -103.],
             tag_corners + [60., -103.],
@@ -37,9 +37,6 @@ class DetectorApriltag():
             tag_corners + [-60., 0.]
         ]
 
-        # mosaic_shape = (1000, 1000)
-        # self.src_corners += np.asarray(mosaic_shape) / 2
-
     def detetct_tags(self, img):
         if len(img.shape) > 2:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -47,19 +44,21 @@ class DetectorApriltag():
         return self.detector.detect(img)
 
     def calculate_homography(self, results, ids):
+        # Calculate homography between detected tags and known positions
         if results is None:
             return None
 
         src = np.empty((0, 2))
         dst = np.empty((0, 2))
 
-        # Loop over the AprilTag detection results
+        # Loop over the AprilTag detection results to pair detected and known
+        # coordinates of tag corners
         for r in results:
             if r.tag_id in ids:
                 src = np.append(src, self.src_corners[r.tag_id], axis=0)
                 dst = np.append(dst, r.corners, axis=0)
             
-        # Plot the path travelled by the marker
+        # Calculate homography between matched points
         H, _ = cv2.findHomography(np.asarray(src), np.asarray(dst), cv2.RANSAC, 10.0)
         return H
 

@@ -1,10 +1,12 @@
-import apriltag
-import cv2
-import numpy as np
-import time
-import csv
-from scipy.spatial.transform import Rotation
+##################################################################
+# VISUALISE WAYPOINTS
+# Script which can be used to animate the waypoints of the boom 
+# and hook block. 
+##################################################################
 
+# Libraries
+import numpy as np
+import csv
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
@@ -30,8 +32,8 @@ def read_csv_tf(file_name):
     
     return R_list, t_list
 
-R_I, t_I = read_csv_tf('yumi/link_I_3.csv')
-R_K, t_K = read_csv_tf('yumi/link_K_3.csv')
+R_I, t_I = read_csv_tf('data/waypoints/link_I_3.csv')
+R_K, t_K = read_csv_tf('data/waypoints/link_K_3.csv')
 
 margin = 0.25
 
@@ -101,7 +103,7 @@ for i in range(len(R_I)):
     plt.pause(0.01)
 
 # Write results to file
-with open('results.csv', mode='w') as f:
+with open('output.csv', mode='w') as f:
     writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
     writer.writerow(['x_I', 'y_I', 'z_I', 'x_K', 'y_K', 'z_K', 'x_pivot', 'y_pivot', 'z_pivot','x_filtered', 'y_filtered', 'z_filtered'])
