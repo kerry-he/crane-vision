@@ -1,0 +1,5 @@
+apriltag==0.0.16
+numpy==1.16.6
+opencv-python==4.2.0.32
+transforms3d==0.3.1
+

@@ -9,7 +9,6 @@
 # Libraries
 import numpy as np
 import csv
-from scipy.spatial.transform import Rotation
 import transforms3d
 
 def main():
