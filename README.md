@@ -45,8 +45,7 @@ self.waypoints = waypoints.read_waypoints("data/waypoints/link_K_1.csv", scale=s
 # self.waypoints = waypoints.rotational_waypoints()
 ```
 The exact definition of these trajectories can be found and changed in `waypoints.py`.
- 
- 
+ 
 There are a couple of other useful scripts that can be used.
 
 To move the YuMi using the specified trajectory independantly from the image stabilization algorithm in `main.py`, run:
