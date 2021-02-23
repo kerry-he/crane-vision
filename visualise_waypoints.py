@@ -59,8 +59,8 @@ t_pivot = []
 t_filtered = []
 for i in range(len(R_I)):
     # Project the translation upwards by l in the y axis
-    offset = R_K[i] @ np.array([-l, 0., 0.])
-    filtered = R_K[i] @ np.array([-l, 0., 0.]) + np.array([0., -l, 0.])
+    offset = np.matmul(R_K[i], np.array([-l, 0., 0.]))
+    filtered = np.matmul(R_K[i], np.array([-l, 0., 0.])) + np.array([0., -l, 0.])
     t_pivot.append(offset + t_K[i])
     t_filtered.append(filtered + t_K[i])
 

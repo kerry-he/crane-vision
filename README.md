@@ -1,10 +1,15 @@
 # Crane Stabilization
 
+This repository contains algorithms which are used to perform stabilization of a video captured from a crane-mounted camera. This was part of a 2020/2021 Summer Research Project held by Monash University.  
 
+Note that as yumipy is only supported for Python 2.7, all files in this repository were developed and tested in Python 2.7. 
 
 ## Installation
 
-Step 1: Follow instructions to install [pypylon](https://github.com/basler/pypylon) to use the Basler Pylon Python wrapper.
+Step 1: Follow instructions to install [pypylon](https://github.com/basler/pypylon) to use the Basler Pylon Python wrapper. Note to install pypylon for Python 2, old binary releases can be found in the [releases](https://github.com/Basler/pypylon/releases) page and installed by running:
+```bash
+$ pip install <your downloaded wheel>.whl
+```
 
 Step 2: Follow instructions to install [yumipy](https://github.com/BerkeleyAutomation/yumipy) to use the YuMi Python wrapper developed by AutoLab, UC Berkeley.
 
@@ -21,9 +26,7 @@ To run the main algorithm, once the Basler camera and YuMi have been properly co
 $ python main.py
 ```
 
-Note that as yumipy is only supported for Python 2.7, all files in this repository were developed and tested in Python 2.7, although some testing has been done in Python 3.6. 
-
-There are several settings which can be adjusted in the `main.py` file. 
+There are several settings which can be adjusted in the `main.py` file. If the `SAVE_VIDEO` and/or `SAVE_POSE` booleans are toggled `True`, the output files will be output into the `data` folder.
 
 ```python
 # Settings
@@ -42,10 +45,8 @@ self.waypoints = waypoints.read_waypoints("data/waypoints/link_K_1.csv", scale=s
 # self.waypoints = waypoints.rotational_waypoints()
 ```
 The exact definition of these trajectories can be found and changed in `waypoints.py`.
-
-If the `SAVE_VIDEO` and/or `SAVE_POSE` booleans are toggled `True`, the output files will be output into the `data` folder.
-
-
+ 
+ 
 There are a couple of other useful scripts that can be used.
 
 To move the YuMi using the specified trajectory independantly from the image stabilization algorithm in `main.py`, run:
