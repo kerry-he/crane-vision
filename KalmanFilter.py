@@ -44,7 +44,7 @@ class KalmanPose:
 class KalmanHomography:
     def __init__(self):
 
-        # State vector [H, dH/dt]
+        # State vector [vec(H), vec(dH/dt)]
         self.x = np.zeros(18)
 
         # State covariance
@@ -66,7 +66,7 @@ class KalmanHomography:
         self.P = np.matmul(A, np.matmul(self.P, np.transpose(A))) + self.Q
 
     def update_step(self, z):
-        # Measurement vector [x, y, z, yaw, pitch, roll]
+        # Measurement vector [vec(H)]
         H = np.eye(9, 18)
         K = np.matmul(self.P, np.matmul(np.transpose(H), np.linalg.inv(
             np.matmul(H, np.matmul(self.P, np.transpose(H))) + self.W)))
