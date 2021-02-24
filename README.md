@@ -2,16 +2,16 @@
 
 This repository contains algorithms which are used to perform stabilization of a video captured from a crane-mounted camera. This was part of a 2020/2021 Summer Research Project held by Monash University.  
 
-Note that as yumipy is only supported for Python 2.7, all files in this repository were developed and tested in Python 2.7. 
+Note that as `yumipy` is only supported for Python 2.7, all files in this repository were developed and tested in Python 2.7. 
 
 ## Installation
 
-Step 1: Follow instructions to install [pypylon](https://github.com/basler/pypylon) to use the Basler Pylon Python wrapper. Note to install pypylon for Python 2, old binary releases can be found in the [releases](https://github.com/Basler/pypylon/releases) page and installed by running:
+Step 1: Follow instructions to install [`pypylon`](https://github.com/basler/pypylon) to use the Basler Pylon Python wrapper. Note to install `pypylon` for Python 2, old binary releases can be found in the [releases](https://github.com/Basler/pypylon/releases) page and installed by running:
 ```bash
 $ pip install <your downloaded wheel>.whl
 ```
 
-Step 2: Follow instructions to install [yumipy](https://github.com/BerkeleyAutomation/yumipy) to use the YuMi Python wrapper developed by AutoLab, UC Berkeley.
+Step 2: Follow instructions to install [`yumipy`](https://github.com/BerkeleyAutomation/yumipy) to use the YuMi Python wrapper developed by AutoLab, UC Berkeley.
 
 Step 3: Install other dependencies by running:
 
